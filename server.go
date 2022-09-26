@@ -2,7 +2,6 @@ package boltedsftp
 
 import (
 	"context"
-	"crypto/rsa"
 	"fmt"
 	"io"
 	"net"
@@ -13,18 +12,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func Serve(ctx context.Context, addr string, db bolted.Database, pk *rsa.PrivateKey, log logr.Logger) (string, error) {
-	cfg := &ssh.ServerConfig{
-		PasswordCallback: func(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
-			return &ssh.Permissions{}, nil
-		},
-	}
-
-	hostSigner, err := ssh.NewSignerFromKey(pk)
-	if err != nil {
-		return "", fmt.Errorf("while creating signer from private key: %w", err)
-	}
-	cfg.AddHostKey(hostSigner)
+func Serve(ctx context.Context, addr string, db bolted.Database, cfg *ssh.ServerConfig, log logr.Logger) (string, error) {
 
 	l, err := net.Listen("tcp", addr)
 	if err != nil {

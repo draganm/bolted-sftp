@@ -1,9 +1,11 @@
 package boltedsftp
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -17,7 +19,23 @@ type dbHandler struct {
 }
 
 func (db dbHandler) Fileread(req *sftp.Request) (io.ReaderAt, error) {
-	return nil, errors.New("not yet implemented")
+	var d []byte
+	parts := strings.Split(path.Clean(req.Filepath), "/")
+	if parts[0] == "" {
+		parts = parts[1:]
+	}
+	dbpath := dbpath.ToPath(parts...)
+	err := bolted.SugaredRead(db.Database, func(tx bolted.SugaredReadTx) error {
+		d = tx.Get(dbpath)
+		return nil
+	})
+	if errors.Is(err, bolted.ErrNotFound) {
+		return nil, os.ErrNotExist
+	}
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(d), nil
 }
 
 func (db dbHandler) Filewrite(req *sftp.Request) (io.WriterAt, error) {

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -69,7 +70,19 @@ func initializeScenario(ctx *godog.ScenarioContext) error {
 		if err != nil {
 			return ctx, err
 		}
-		addr, err := boltedsftp.Serve(ctx, "localhost:0", db, pk, logr.Discard())
+		cfg := &ssh.ServerConfig{
+			PasswordCallback: func(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
+				return &ssh.Permissions{}, nil
+			},
+		}
+
+		hostSigner, err := ssh.NewSignerFromKey(pk)
+		if err != nil {
+			return ctx, fmt.Errorf("while creating signer from private key: %w", err)
+		}
+		cfg.AddHostKey(hostSigner)
+
+		addr, err := boltedsftp.Serve(ctx, "localhost:0", db, cfg, logr.Discard())
 		if err != nil {
 			return ctx, err
 		}
@@ -116,6 +129,9 @@ func initializeScenario(ctx *godog.ScenarioContext) error {
 	ctx.Step(`^the result should have one directory$`, ti.theResultShouldHaveOneDirectory)
 	ctx.Step(`^a database with (\d+) maps in the root$`, ti.aDatabaseWithMapsInTheRoot)
 	ctx.Step(`^the result should have (\d+) directories$`, ti.theResultShouldHaveDirectories)
+	ctx.Step(`^file with some database$`, ti.fileWithSomeDatabase)
+	ctx.Step(`^I fetch the file$`, ti.iFetchTheFile)
+	ctx.Step(`^I should get the content of the file$`, ti.iShouldGetTheContentOfTheFile)
 	return nil
 }
 
@@ -124,6 +140,7 @@ type testInstance struct {
 	serverAddr string
 	sc         *sftp.Client
 	files      []os.FileInfo
+	data       []byte
 }
 
 func (ti *testInstance) anEmptyDatabase() error {
@@ -176,5 +193,35 @@ func (ti *testInstance) theResultShouldHaveDirectories(cnt int) error {
 		return fmt.Errorf("expected %d files, but got %d", cnt, len(ti.files))
 	}
 
+	return nil
+}
+
+func (ti *testInstance) fileWithSomeDatabase() error {
+	return bolted.SugaredWrite(ti.db, func(tx bolted.SugaredWriteTx) error {
+		tx.Put(dbpath.ToPath("foo"), []byte("bar"))
+		return nil
+	})
+}
+
+func (ti *testInstance) iFetchTheFile() error {
+	f, err := ti.sc.Open("foo")
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+	ti.data, err = io.ReadAll(f)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func (ti *testInstance) iShouldGetTheContentOfTheFile() error {
+	if string(ti.data) != "bar" {
+		return fmt.Errorf("expected %q but got %q", "bar", string(ti.data))
+	}
 	return nil
 }
