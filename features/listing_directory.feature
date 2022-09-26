@@ -20,3 +20,9 @@ Feature: listing directories
         Given a database with one map in the root
         When I list the map directory
         Then the result should be empty
+
+    Scenario: listing empty subdirectory
+        Given a database with one map in the root
+        And the map in the root contains one submap
+        When I list the map directory
+        Then the result should have one directory

@@ -74,6 +74,9 @@ func initializeScenario(ctx *godog.ScenarioContext) error {
 			PasswordCallback: func(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
 				return &ssh.Permissions{}, nil
 			},
+			PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
+				return &ssh.Permissions{}, nil
+			},
 		}
 
 		hostSigner, err := ssh.NewSignerFromKey(pk)
@@ -133,6 +136,7 @@ func initializeScenario(ctx *godog.ScenarioContext) error {
 	ctx.Step(`^I fetch the file$`, ti.iFetchTheFile)
 	ctx.Step(`^I should get the content of the file$`, ti.iShouldGetTheContentOfTheFile)
 	ctx.Step(`^I list the map directory$`, ti.iListTheMapDirectory)
+	ctx.Step(`^the map in the root contains one submap$`, ti.theMapInTheRootContainsOneSubmap)
 
 	return nil
 }
@@ -235,5 +239,11 @@ func (ti *testInstance) iListTheMapDirectory() error {
 	}
 	ti.files = fi
 	return nil
+}
 
+func (ti *testInstance) theMapInTheRootContainsOneSubmap() error {
+	return bolted.SugaredWrite(ti.db, func(tx bolted.SugaredWriteTx) error {
+		tx.CreateMap(dbpath.ToPath("foo", "bar"))
+		return nil
+	})
 }

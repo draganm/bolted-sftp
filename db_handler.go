@@ -47,7 +47,6 @@ func (db dbHandler) Filecmd(req *sftp.Request) error {
 }
 
 func (db dbHandler) Filelist(req *sftp.Request) (sftp.ListerAt, error) {
-
 	parts := []string{}
 	pth := path.Clean(req.Filepath)
 
@@ -81,6 +80,9 @@ func (mfi minimalFileInfo) Size() int64 {
 }
 
 func (mfi minimalFileInfo) Mode() os.FileMode {
+	if mfi.isDir {
+		return os.ModeDir | 0700
+	}
 	return 0700
 }
 
@@ -97,6 +99,11 @@ func (mfi minimalFileInfo) Sys() any {
 }
 
 func (l *lister) ListAt(infos []os.FileInfo, from int64) (cnt int, err error) {
+	if from == 0 && len(infos) == 1 {
+		infos[0] = minimalFileInfo{name: ".", isDir: true}
+		infos = infos[1:]
+		return 1, nil
+	}
 	// TODO remember the last entry and seek to it.
 	err = bolted.SugaredRead(l.db, func(tx bolted.SugaredReadTx) error {
 		if !tx.Exists(l.path) {
