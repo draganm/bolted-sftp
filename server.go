@@ -16,7 +16,6 @@ import (
 func Serve(ctx context.Context, addr string, db bolted.Database, pk *rsa.PrivateKey, log logr.Logger) (string, error) {
 	cfg := &ssh.ServerConfig{
 		PasswordCallback: func(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
-			fmt.Println("password", string(password))
 			return &ssh.Permissions{}, nil
 		},
 	}
@@ -124,8 +123,6 @@ func handleConnection(ctx context.Context, cfg *ssh.ServerConfig, conn net.Conn,
 		if err == io.EOF {
 			server.Close()
 		}
-
-		fmt.Println("serving done")
 
 		if err != nil {
 			return fmt.Errorf("server failed: %w", err)

@@ -43,14 +43,18 @@ type lister struct {
 	path dbpath.Path
 }
 
-type minimalFileInfo string
+type minimalFileInfo struct {
+	name  string
+	isDir bool
+	size  int64
+}
 
 func (mfi minimalFileInfo) Name() string {
-	return string(mfi)
+	return mfi.name
 }
 
 func (mfi minimalFileInfo) Size() int64 {
-	return 0
+	return mfi.size
 }
 
 func (mfi minimalFileInfo) Mode() os.FileMode {
@@ -62,7 +66,7 @@ func (mfi minimalFileInfo) ModTime() time.Time {
 }
 
 func (mfi minimalFileInfo) IsDir() bool {
-	return true
+	return mfi.isDir
 }
 
 func (mfi minimalFileInfo) Sys() any {
@@ -70,7 +74,7 @@ func (mfi minimalFileInfo) Sys() any {
 }
 
 func (l *lister) ListAt(infos []os.FileInfo, from int64) (cnt int, err error) {
-
+	// TODO remember the last entry and seek to it.
 	err = bolted.SugaredRead(l.db, func(tx bolted.SugaredReadTx) error {
 		if !tx.Exists(l.path) {
 			return os.ErrNotExist
@@ -80,7 +84,7 @@ func (l *lister) ListAt(infos []os.FileInfo, from int64) (cnt int, err error) {
 				from--
 				continue
 			}
-			infos[cnt] = minimalFileInfo(it.GetKey())
+			infos[cnt] = minimalFileInfo{name: it.GetKey(), isDir: it.GetValue() == nil, size: int64(len(it.GetValue()))}
 			cnt++
 			if cnt == len(infos) {
 				return nil

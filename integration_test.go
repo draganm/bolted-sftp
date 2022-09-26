@@ -93,8 +93,6 @@ func initializeScenario(ctx *godog.ScenarioContext) error {
 			return ctx, fmt.Errorf("while opening ssh client: %w", err)
 		}
 
-		fmt.Println("creating client")
-
 		sc, err := sftp.NewClient(conn)
 		if err != nil {
 			return ctx, fmt.Errorf("while creating sftp client: %w", err)
@@ -116,6 +114,8 @@ func initializeScenario(ctx *godog.ScenarioContext) error {
 	ctx.Step(`^the result should be empty$`, ti.theResultShouldBeEmpty)
 	ctx.Step(`^a database with one map in the root$`, ti.aDatabaseWithOneMapInTheRoot)
 	ctx.Step(`^the result should have one directory$`, ti.theResultShouldHaveOneDirectory)
+	ctx.Step(`^a database with (\d+) maps in the root$`, ti.aDatabaseWithMapsInTheRoot)
+	ctx.Step(`^the result should have (\d+) directories$`, ti.theResultShouldHaveDirectories)
 	return nil
 }
 
@@ -157,6 +157,23 @@ func (ti *testInstance) aDatabaseWithOneMapInTheRoot() error {
 func (ti *testInstance) theResultShouldHaveOneDirectory() error {
 	if len(ti.files) != 1 {
 		return fmt.Errorf("expected %d files, but got %d", 1, len(ti.files))
+	}
+
+	return nil
+}
+
+func (ti *testInstance) aDatabaseWithMapsInTheRoot(cnt int) error {
+	return bolted.SugaredWrite(ti.db, func(tx bolted.SugaredWriteTx) error {
+		for i := 0; i < cnt; i++ {
+			tx.CreateMap(dbpath.ToPath(fmt.Sprintf("%05d", i)))
+		}
+		return nil
+	})
+}
+
+func (ti *testInstance) theResultShouldHaveDirectories(cnt int) error {
+	if len(ti.files) != cnt {
+		return fmt.Errorf("expected %d files, but got %d", cnt, len(ti.files))
 	}
 
 	return nil
