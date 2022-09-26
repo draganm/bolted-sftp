@@ -49,8 +49,13 @@ func (db dbHandler) Filecmd(req *sftp.Request) error {
 func (db dbHandler) Filelist(req *sftp.Request) (sftp.ListerAt, error) {
 
 	parts := []string{}
-	if req.Filepath != "" && req.Filepath != "/" {
+	pth := path.Clean(req.Filepath)
+
+	if pth != "" && pth != "/" {
 		parts = strings.Split(req.Filepath, "/")
+		if len(parts[0]) == 0 {
+			parts = parts[1:]
+		}
 	}
 
 	return &lister{db: db.Database, path: dbpath.Path(parts)}, nil

@@ -14,3 +14,9 @@ Feature: listing directories
         Given a database with 101 maps in the root
         When I list the root directory
         Then the result should have 101 directories
+
+
+    Scenario: listing empty subdirectory
+        Given a database with one map in the root
+        When I list the map directory
+        Then the result should be empty

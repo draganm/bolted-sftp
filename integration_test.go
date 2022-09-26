@@ -132,6 +132,8 @@ func initializeScenario(ctx *godog.ScenarioContext) error {
 	ctx.Step(`^file with some database$`, ti.fileWithSomeDatabase)
 	ctx.Step(`^I fetch the file$`, ti.iFetchTheFile)
 	ctx.Step(`^I should get the content of the file$`, ti.iShouldGetTheContentOfTheFile)
+	ctx.Step(`^I list the map directory$`, ti.iListTheMapDirectory)
+
 	return nil
 }
 
@@ -224,4 +226,14 @@ func (ti *testInstance) iShouldGetTheContentOfTheFile() error {
 		return fmt.Errorf("expected %q but got %q", "bar", string(ti.data))
 	}
 	return nil
+}
+
+func (ti *testInstance) iListTheMapDirectory() error {
+	fi, err := ti.sc.ReadDir("/foo")
+	if err != nil {
+		return err
+	}
+	ti.files = fi
+	return nil
+
 }
